@@ -1,0 +1,29 @@
+# @scf-option {"processors": []}
+version: 2
+registries:
+  github-artifacts-npm:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{secrets.GHA_PACKAGES}}
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "08:00"
+    registries:
+      - github-artifacts-npm
+    open-pull-requests-limit: 10
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "08:00"
+    open-pull-requests-limit: 10
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "08:00"
+    open-pull-requests-limit: 10

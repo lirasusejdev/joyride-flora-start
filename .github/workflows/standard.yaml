@@ -1,0 +1,50 @@
+# @scf-option {"ignore": true}
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature/*
+      - fix/*
+      - release/*
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch:
+
+name: Standard
+
+env:
+  app_name: "pdd-template-static-website-react-flora"
+
+jobs:
+  ci:
+    name: CI - Build and Test
+    runs-on: ["core-shr"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: npm
+          registry-url: https://npm.pkg.github.com/
+          scope: "@grupoboticario"
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GHA_PACKAGES }}
+      - run: npm run test
+      - run: npm run build
+      - name: Generates Artifact
+        run: |
+          cd build
+          tar -zcvf ${{ github.run_number }}.tar.gz *
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.run_number }}
+          path: build/${{ github.run_number }}.tar.gz
+          if-no-files-found: error
