@@ -1,0 +1,14 @@
+# @scf-option  {"ignore": "true"}
+title: Front-End
+required:
+  [certificates]
+properties:
+  certificates:
+    type: object
+    title: Domains
+    ui:field: GbGetDomains
+    properties:
+      subDomain:
+        type: string
+      domain:
+        type: string

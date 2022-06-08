@@ -1,0 +1,139 @@
+# @scf-option {"appenders": ["GithubWorkflowAppender"]}
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - feature/*
+      - fix/*
+      - release/*
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+  workflow_dispatch:
+
+name: Standard
+
+env:
+  app_name: "{{parameters.component}}"
+  aws_region: us-east-1
+  bucket_suffix: "{{parameters.bucketSuffix}}"
+  hosted_zone_id: "{{parameters.certificates.hostedZoneId}}"
+  namespace: "{{parameters.system}}"
+  value_stream: "{{parameters.domain}}"
+
+jobs:
+  ci:
+    name: CI - Build and Test
+    runs-on: ["vs-{{parameters.domain}}"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: npm
+          registry-url: https://npm.pkg.github.com/
+          scope: "@grupoboticario"
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: $\{{ secrets.GHA_PACKAGES }}
+      - run: npm run test
+      - run: npm run build
+      - name: Generates Artifact
+        run: |
+          cd build
+          tar -zcvf $\{{ github.run_number }}.tar.gz *
+      - uses: actions/upload-artifact@v3
+        with:
+          name: $\{{ github.run_number }}
+          path: build/$\{{ github.run_number }}.tar.gz
+          if-no-files-found: error
+  cd_dev:
+    name: CD - DEV
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: [ci]
+    runs-on: ["vs-{{parameters.domain}}"]
+    environment:
+      name: dev
+      url: $\{{ steps.actions-cd-app.outputs.environmentUrl }}
+    steps:
+      - uses: grupoboticario/actions-cd-eks@v1
+        name: Deploy Infra
+        id: actions-cd-infra
+        with:
+          appName: $\{{ env.app_name }}
+          awsRegion: $\{{ env.aws_region }}
+          environment: dev
+          namespace: $\{{ env.namespace }}
+          type: infra
+          vs: $\{{ env.value_stream }}
+      - uses: grupoboticario/actions-cd-frontend-spa@v1
+        id: actions-cd-app
+        name: Deploy Website
+        with:
+          awsRegion: $\{{ env.aws_region }}
+          environment: dev
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.app_name }}-dev-$\{{ env.bucket_suffix }}
+          vs: $\{{ env.value_stream }}
+  cd_hml:
+    name: CD - HML
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: [cd_dev]
+    runs-on: ["vs-{{parameters.domain}}"]
+    environment:
+      name: hml
+      url: $\{{ steps.actions-cd-app.outputs.environmentUrl }}
+    steps:
+      - uses: grupoboticario/actions-cd-eks@v1
+        name: Deploy Infra
+        id: actions-cd-infra
+        with:
+          appName: $\{{ env.app_name }}
+          awsRegion: $\{{ env.aws_region }}
+          environment: hml
+          namespace: $\{{ env.namespace }}
+          type: infra
+          vs: $\{{ env.value_stream }}
+      - uses: grupoboticario/actions-cd-frontend-spa@v1
+        id: actions-cd-app
+        name: Deploy Website
+        with:
+          awsRegion: $\{{ env.aws_region }}
+          environment: hml
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.app_name }}-hml-$\{{ env.bucket_suffix }}
+          vs: $\{{ env.value_stream }}
+  cd_prd:
+    name: CD - PRD
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: [cd_hml]
+    runs-on: ["vs-{{parameters.domain}}"]
+    environment:
+      name: prd
+      url: $\{{ steps.actions-cd-app.outputs.environmentUrl }}
+    steps:
+      - uses: grupoboticario/actions-cd-eks@v1
+        name: Deploy Infra
+        id: actions-cd-infra
+        with:
+          appName: $\{{ env.app_name }}
+          awsRegion: $\{{ env.aws_region }}
+          environment: prd
+          namespace: $\{{ env.namespace }}
+          type: infra
+          vs: $\{{ env.value_stream }}
+      - uses: grupoboticario/actions-cd-frontend-spa@v1
+        name: Deploy Website
+        id: actions-cd-app
+        with:
+          awsRegion: $\{{ env.aws_region }}
+          environment: prd
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.app_name }}-prd-$\{{ env.bucket_suffix }}
+          vs: $\{{ env.value_stream }}
