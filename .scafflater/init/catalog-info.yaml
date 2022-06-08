@@ -1,0 +1,6 @@
+# @scf-option { "appenders": ["./appenders/yaml-appender"] }
+
+metadata:
+  tags: ["web", "html"]
+spec:
+  lifecycle: "experimental"

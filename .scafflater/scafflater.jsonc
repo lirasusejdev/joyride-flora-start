@@ -1,0 +1,33 @@
+{
+  "template": {
+    "name": "pdd-template-static-website-react-flora",
+    "description": "Template to configure React project using Flora design system",
+    "version": "1.0.0",
+    "options": {},
+    "parameters": [
+      {
+        "type": "rawlist",
+        "name": "githubOrg",
+        "message": "Github Org",
+        "choices": ["grupoboticario", "gbsandbox"]
+      },
+      {
+        "type": "input",
+        "name": "component",
+        "message": "Component Name",
+        "regex": "[a-z0-9-]+"
+      },
+      {
+        "type": "input",
+        "name": "componentDescription",
+        "message": "Component Description"
+      },
+      {
+        "type": "input",
+        "name": "githubTeam",
+        "message": "Github Team Slug",
+        "regex": "[a-z0-9-]+"
+      }
+    ]
+  }
+}

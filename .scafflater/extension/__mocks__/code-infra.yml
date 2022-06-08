@@ -1,0 +1,86 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: 
+name: Standard
+env:
+  aws_account_id: '574485109765'
+  aws_region: us-east-1
+  ecr_repository: fndiaz-20
+  app_name: fndiaz-20
+  value_stream: sandbox
+  namespace: gh-actions
+  relativePath: .github/actions/actions-ci-eks/
+jobs:
+  ci:
+    name: CI - Build and Test
+    runs-on: self-hosted
+    container: ubuntu
+    environment: ci
+    steps:
+      - name: Executing CI
+        run: echo "Executing CI"
+  infra_dev:
+    name: INFRA - DEV
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: ci
+    runs-on: self-hosted
+    container: ubuntu
+    environment: dev
+    steps:
+      - name: Provisioning infra Dev
+        run: echo "Provisioning infra Dev"
+  cd_dev:
+    name: CD - DEV
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: infra_dev
+    runs-on: self-hosted
+    container: ubuntu
+    environment: dev
+    steps:
+      - name: Executing CD - DEV
+        run: echo "Executing CD on Dev"
+  infra_hml:
+    name: INFRA - HML
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: cd_dev
+    runs-on: self-hosted
+    container: ubuntu
+    environment: hml
+    steps:
+      - name: Provisioning infra Hml
+        run: echo "Provisioning infra Hml"
+  cd_hml:
+    name: CD - HML
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: infra_hml
+    runs-on: self-hosted
+    container: ubuntu
+    environment: hml
+    steps:
+      - name: Executing CD - HML
+        run: echo "Executing CD on HML"
+  infra_prd:
+    name: INFRA - PRD
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: cd_hml
+    runs-on: self-hosted
+    container: ubuntu
+    environment: prd
+    steps:
+      - name: Provisioning infra Prd
+        run: echo "Provisioning infra Prd"
+  cd_prd:
+    name: CD - PRD
+    if: ${{ success() && github.event_name != 'pull_request' }}
+    needs: infra_prd
+    runs-on: self-hosted
+    container: ubuntu
+    environment: prd
+    steps:
+      - name: Executing CD - PRD
+        run: echo "Executing CD on PRD"
