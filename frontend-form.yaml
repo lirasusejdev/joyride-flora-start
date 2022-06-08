@@ -1,0 +1,8 @@
+title: Front-End
+required:
+  - certificates
+properties:
+  certificates:
+    title: Domains
+    type: object
+    ui:field: GbGetDomains

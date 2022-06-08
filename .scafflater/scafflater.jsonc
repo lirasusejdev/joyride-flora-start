@@ -1,0 +1,51 @@
+{
+  "template": {
+    "name": "pdd-template-static-website",
+    "description": "Template to configure static Frontend",
+    "version": "1.0.0",
+    "options": {
+      "ignore": ["/.prettierrc"]
+    },
+    "parameters": [
+      {
+        "type": "rawlist",
+        "name": "githubOrg",
+        "message": "Github Org",
+        "choices": ["grupoboticario", "gbsandbox"]
+      },
+      {
+        "type": "input",
+        "name": "githubTeam",
+        "message": "Github Team Slug",
+        "regex": "[a-z0-9-]+"
+      }
+    ]
+  },
+  "templates": [
+    {
+      "name": "scafflater-template",
+      "version": "0.0.1",
+      "source": {
+        "name": "github",
+        "key": "https://github.com/chicoribas/scafflater-template",
+        "options": {
+          "baseUrl": "https://github.com",
+          "baseUrlApi": "https://api.github.com"
+        }
+      },
+      "partials": [
+        {
+          "name": "add-partial",
+          "parameters": {
+            "name": "infra-cd",
+            "description": "Adds steps in github workflow for infra delivery"
+          }
+        }
+      ],
+      "parameters": {
+        "name": "pdd-template-static-website",
+        "description": "Template to configure static Frontend"
+      }
+    }
+  ]
+}

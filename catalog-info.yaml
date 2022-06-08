@@ -1,0 +1,176 @@
+# @scf-option  {"ignore": "true"}
+apiVersion: backstage.io/v1beta2
+kind: Template
+metadata:
+  name: pdd-template-static-website
+  title: Static website
+  description: Provides static sites in the SPA model. You can use this template with React or Angular.
+  tags: ['web', 'html']
+spec:
+  owner: pdd-team
+  type: website
+
+  parameters:
+    - $yaml: ../../../pdd-template-backstage/blob/main/backstage/scaffolder/general-info-form.yaml
+    - $yaml: ./frontend-form.yaml
+    - $yaml: ../../../pdd-template-crossplane-aws/blob/main/backstage/scaffolder/infra-form.yaml
+
+  steps:
+    - id: vars
+      name: Load Domain Vars
+      action: gb-tech:get-vars
+      input:
+        parameters: '{{json parameters}}'
+        domain: '{{ parameters.domain }}'
+        system: '{{ parameters.system }}'
+        component: '{{ parameters.component }}'
+        sonarProjectId: '{{steps.sonar.output.projectId}}'
+        team: '{{ parameters.team }}'
+        additionalParameters: >-
+          {
+            "lifecycle": "experimental",
+            "hasArgocd": true,
+            "argocdAppSelector": "{{parameters.component}}",
+            "hasNewRelic": true,
+            "newRelicEntityName": "{{parameters.component}}",
+            "appPort": 3000
+          }
+
+    - id: github-app-token
+      name: Get Github App Tokens
+      action: gb-tech:get-github-app-token
+      input:
+        accountLogin: '{{steps.vars.output.github.orgName}}'
+
+    - id: scafflater-init
+      name: Init code template
+      action: gb-tech:scafflater-init
+      input:
+        repo: 'https://github.com/{{steps.vars.output.github.orgName}}/pdd-template-static-website'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-init-github
+      name: Configuring Github
+      action: gb-tech:scafflater-init
+      input:
+        repo: 'https://github.com/{{steps.vars.output.github.orgName}}/pdd-template-github'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-init-backstage
+      name: Init Backstage Configuration
+      action: gb-tech:scafflater-init
+      input:
+        repo: 'https://github.com/{{steps.vars.output.github.orgName}}/pdd-template-backstage'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-catalog-info
+      name: Generate "catalog-info.yaml"
+      action: gb-tech:scafflater-add-partial
+      input:
+        templateName: 'pdd-template-backstage'
+        partial: 'catalog:configure'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-init-infra
+      name: Init Infra
+      action: gb-tech:scafflater-init
+      input:
+        repo: 'https://github.com/{{steps.vars.output.github.orgName}}/pdd-template-crossplane-aws'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-infra-cd
+      name: Configuring infra cd
+      action: gb-tech:scafflater-add-partial
+      input:
+        templateName: 'pdd-template-crossplane-aws'
+        partial: 'infra-cd'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-infra-app-role
+      name: Add frontend DNS
+      action: gb-tech:scafflater-add-partial
+      input:
+        templateName: 'pdd-template-crossplane-aws'
+        partial: 'frontend'
+        parameters: '{{json steps.vars.output.parameters}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: scafflater-infra
+      name: Configuring requested cloud services
+      action: gb-tech:infra-scafflater
+      input:
+        repo: 'https://github.com/{{steps.vars.output.github.orgName}}/pdd-template-crossplane-aws'
+        parameters: '{{json steps.vars.output.parameters}}'
+        services: '{{#if parameters.services}}{{json parameters.services}}{{else}}[]{{/if}}'
+        config: >-
+          {
+            "githubUsername": "x-access-token",
+            "githubPassword": "{{ steps.github-app-token.output.accessToken }}",
+            "annotate": false
+          }
+
+    - id: create-repo
+      name: Create repo
+      action: gb-tech:initialize-repo
+      input:
+        owner: '{{steps.vars.output.github.orgName}}'
+        repo: '{{steps.vars.output.github.repoName}}'
+        description: '{{parameters.componentDescription}}'
+        type: 'app-backend'
+        template: '{{steps.vars.output.github.orgName}}/pdd-template-static-website'
+        domain: '{{parameters.domain}}'
+        team: '{{parameters.team}}'
+        committerEmail: '{{parameters.githubUser.email}}'
+        committerName: '{{parameters.githubUser.displayName}}'
+
+    - id: register
+      name: Register New System
+      action: catalog:register
+      input:
+        repoContentsUrl: '{{steps.vars.output.github.repoUrl}}/blob/main'
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    remoteUrl: '{{steps.vars.output.github.repoUrl}}'
+    entityRef: '{{ steps.register.output.entityRef }}'

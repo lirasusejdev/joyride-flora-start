@@ -1,0 +1,9 @@
+{
+  "name": "extension",
+  "version": "1.0.0",
+  "dependencies": {
+    "deepmerge": "4.2.2",
+    "js-yaml": "4.1.0",
+    "scafflater": "0.0.97"
+  }
+}

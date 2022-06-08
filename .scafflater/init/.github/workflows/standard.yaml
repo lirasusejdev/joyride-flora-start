@@ -1,0 +1,237 @@
+# @scf-option {"appenders": ["GithubWorkflowAppender"]}
+
+name: Standard
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  aws_account_id: '{{parameters.domainInfo.aws.shr.account-id}}'
+  aws_region: us-east-1
+  ecr_repository: '{{parameters.component}}'
+  app_name: '{{parameters.component}}'
+  value_stream: '{{parameters.domain}}'
+  namespace: '{{parameters.system}}'
+  relativePath: .github/actions/actions-ci-eks/
+  aws_account_dev: '{{parameters.domainInfo.aws.dev.account-id}}'
+  aws_account_hml: '{{parameters.domainInfo.aws.hml.account-id}}'
+  aws_account_prd: '{{parameters.domainInfo.aws.prd.account-id}}'
+  hosted_zone_id: '{{parameters.certificates.hostedZoneId}}'
+  s3_bucket_name: '{{parameters.component}}-frontend'
+
+jobs:
+  ci:
+    name: CI - Build and Test
+    runs-on: 'vs-{{parameters.domain}}'
+    environment: ci
+    env:
+      GH_REF: $\{{ (github.event.pull_request.merged && github.event.pull_request.base.ref) || github.ref }}
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: $\{{ env.GH_REF }}
+
+      - name: Generates Artifact
+        run: |
+          cd public
+          tar -zcvf $\{{ github.run_number }}.tar.gz *
+
+      - uses: actions/upload-artifact@v2
+        name: Upload Artifact
+        with:
+          name: $\{{ github.run_number }}
+          path: public/$\{{ github.run_number }}.tar.gz
+          if-no-files-found: error
+
+  infra_dev:
+    name: INFRA - DEV
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: ci
+    runs-on: 'vs-{{parameters.domain}}'
+    environment: dev
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        if: $\{{ success() && (github.event_name != 'pull_request' || github.actor == 'dependabot[bot]') }}
+        with:
+          repository: gbsandbox/actions-cd-infra
+          ref: v0.0.9
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-infra
+
+      - name: Checkout App
+        uses: actions/checkout@v2
+        if: $\{{ success() && ( github.event_name != 'pull_request' || github.actor == 'dependabot[bot]' )  }}
+        with:
+          path: .github/actions/actions-ci-eks/app-ci
+
+      - name: Custom action infra
+        uses: ./.github/actions/actions-cd-infra
+        with:
+          action: cd-infra
+          environment: dev
+          appName: $\{{ env.app_name }}-dev
+          namespace: $\{{ env.namespace }}
+          vs: $\{{ env.value_stream }}
+          awsRegion: $\{{ env.aws_region }}
+          awsAccountShr: $\{{ env.aws_account_id }}
+          relativePath: .github/actions/actions-ci-eks/
+          clusterName: $\{{ env.clusterName }}
+
+  cd_dev:
+    name: CD - DEV
+    if: $\{{ success() && github.event_name != 'pull_request' }}
+    needs: infra_dev
+    runs-on: 'vs-{{parameters.domain}}'
+    environment:
+      name: dev
+      url: $\{{ steps.deployment.outputs.environmentUrl }}
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        with:
+          repository: gbsandbox/actions-cd-frontend-spa
+          ref: v1.0.5
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-frontend-spa
+
+      - name: Deployment
+        id: deployment
+        uses: ./.github/actions/actions-cd-frontend-spa
+        with:
+          awsAccount: $\{{ env.aws_account_dev }}
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.s3_bucket_name }}-dev
+
+  infra_hml:
+    name: INFRA - HML
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: cd_dev
+    runs-on: 'vs-{{parameters.domain}}'
+    environment: hml
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        if: $\{{ success() && (github.event_name != 'pull_request' || github.actor == 'dependabot[bot]') }}
+        with:
+          repository: gbsandbox/actions-cd-infra
+          ref: v0.0.9
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-infra
+
+      - name: Checkout App
+        uses: actions/checkout@v2
+        if: $\{{ success() && ( github.event_name != 'pull_request' || github.actor == 'dependabot[bot]' )  }}
+        with:
+          path: .github/actions/actions-ci-eks/app-ci
+
+      - name: Custom action infra
+        uses: ./.github/actions/actions-cd-infra
+        with:
+          action: cd-infra
+          environment: hml
+          appName: $\{{ env.app_name }}-hml
+          namespace: $\{{ env.namespace }}
+          vs: $\{{ env.value_stream }}
+          awsRegion: $\{{ env.aws_region }}
+          awsAccountShr: $\{{ env.aws_account_id }}
+          relativePath: .github/actions/actions-ci-eks/
+          clusterName: $\{{ env.clusterName }}
+
+  cd_hml:
+    name: CD - HML
+    if: $\{{ success() && github.event_name != 'pull_request' }}
+    needs: infra_hml
+    runs-on: 'vs-{{parameters.domain}}'
+    environment:
+      name: hml
+      url: $\{{ steps.deployment.outputs.environmentUrl }}
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        with:
+          repository: gbsandbox/actions-cd-frontend-spa
+          ref: v1.0.5
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-frontend-spa
+
+      - name: Deployment
+        id: deployment
+        uses: ./.github/actions/actions-cd-frontend-spa
+        with:
+          awsAccount: $\{{ env.aws_account_hml }}
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.s3_bucket_name }}-hml
+
+  infra_prd:
+    name: INFRA - PRD
+    if: $\{{ success() && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+    needs: cd_hml
+    runs-on: 'vs-{{parameters.domain}}'
+    environment: prd
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        if: $\{{ success() && (github.event_name != 'pull_request' || github.actor == 'dependabot[bot]') }}
+        with:
+          repository: gbsandbox/actions-cd-infra
+          ref: v0.0.9
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-infra
+
+      - name: Checkout App
+        uses: actions/checkout@v2
+        if: $\{{ success() && ( github.event_name != 'pull_request' || github.actor == 'dependabot[bot]' )  }}
+        with:
+          path: .github/actions/actions-ci-eks/app-ci
+
+      - name: Custom action infra
+        uses: ./.github/actions/actions-cd-infra
+        with:
+          action: cd-infra
+          environment: prd
+          appName: $\{{ env.app_name }}-prd
+          namespace: $\{{ env.namespace }}
+          vs: $\{{ env.value_stream }}
+          awsRegion: $\{{ env.aws_region }}
+          awsAccountShr: $\{{ env.aws_account_id }}
+          relativePath: .github/actions/actions-ci-eks/
+          clusterName: $\{{ env.clusterName }}
+
+  cd_prd:
+    name: CD - PRD
+    if: $\{{ success() && github.event_name != 'pull_request' }}
+    needs: infra_prd
+    runs-on: 'vs-{{parameters.domain}}'
+    environment:
+      name: prd
+      url: $\{{ steps.deployment.outputs.environmentUrl }}
+
+    steps:
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2
+        with:
+          repository: gbsandbox/actions-cd-frontend-spa
+          ref: v1.0.5
+          token: $\{{ secrets.GIT_HUB_TOKEN }}
+          path: .github/actions/actions-cd-frontend-spa
+
+      - name: Deployment
+        id: deployment
+        uses: ./.github/actions/actions-cd-frontend-spa
+        with:
+          awsAccount: $\{{ env.aws_account_prd }}
+          hostedZoneId: $\{{ env.hosted_zone_id }}
+          s3BucketName: $\{{ env.s3_bucket_name }}-prd
