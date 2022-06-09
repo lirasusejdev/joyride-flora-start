@@ -1,0 +1,12 @@
+.drawer {
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-size: 16px;
+  color: #fff;
+  background-color: red;
+  border-radius: 10px;
+  display: flex;
+  margin-bottom: 20px;
+  align-items: center;
+  padding: 24px;
+  justify-content: space-between;
+}
