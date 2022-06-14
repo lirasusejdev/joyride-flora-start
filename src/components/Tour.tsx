@@ -1,55 +1,35 @@
-import React from 'react'
-import JoyRide from 'react-joyride'
+import { Box } from '@grupoboticario/flora-react'
+import ReactJoyride, { Step } from 'react-joyride'
 
-// Tour steps
-const TOUR_STEPS = [
+const steps: Step[] = [
   {
-    target: '.tour-search',
-    content: 'This is where you can search the dashboard.',
-    disableBeacon: true // start click automatically
+    content: <h2>Lets begin our journey!</h2>,
+    locale: { skip: <strong aria-label="skip">S-K-I-P</strong> },
+    placement: 'center',
+    target: 'body'
   },
   {
-    target: '.tour-orders',
-    content: 'Bar chart for total order. You can see beautiful graphs here, thanks to creative tim for such UI.'
-  },
-  {
-    target: '.tour-external-links',
-    content: 'This is where you can find the external links.'
-  },
-  {
-    target: '.tour-footer',
-    content: 'This is where you can see the footer links.'
-  },
-  {
-    target: '.tour-link',
-    content: 'This is where you can start the tour again in future.'
+    content: <h2>Sticky elements</h2>,
+    floaterProps: {
+      disableAnimation: true
+    },
+    spotlightPadding: 5,
+    target: '.mybox'
   }
 ]
 
-// Tour component
-const Tour = () => {
+export const Tour = () => {
   return (
     <>
-      <JoyRide
-        steps={TOUR_STEPS}
-        continuous={true}
-        showSkipButton={true}
-        styles={{
-          tooltipContainer: {
-            textAlign: 'left'
-          },
-          buttonNext: {
-            backgroundColor: 'green'
-          },
-          buttonBack: {
-            marginRight: 10
-          }
-        }}
-        locale={{
-          last: 'End tour',
-          skip: 'Close tour'
+      <ReactJoyride
+        steps={steps}
+        continuous
+        run
+        callback={(props) => {
+          // console.log(props)
         }}
       />
+      <Box className="mybox" css={{ width: 300, height: 300, margin: 10, backgroundColor: 'DarkBlue' }} />
     </>
   )
 }
