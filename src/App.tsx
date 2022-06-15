@@ -25,9 +25,6 @@ function App() {
           <Box>
             <Logo size="100" />
           </Box>
-          <Box>
-            <Button variant="success">Start Tour </Button>
-          </Box>
           <Tour></Tour>
         </Container>
       </Flex>
