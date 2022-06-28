@@ -1,6 +1,6 @@
-import { Container, FloraProvider, globalCss, Flex, Button, Box } from '@grupoboticario/flora-react'
+import { Container, FloraProvider, globalCss, Flex, Box } from '@grupoboticario/flora-react'
 import { Logo } from './components/Logo'
-import Tour from './components/Tour'
+import { Home } from './components/Home'
 
 const globalStyle = globalCss({
   'html, body, body > div:first-child, div#__next, div#__next > div': {
@@ -9,26 +9,10 @@ const globalStyle = globalCss({
 })
 
 function App() {
-  globalStyle()
-
   return (
-    <FloraProvider>
-      <Flex
-        align="center"
-        css={{
-          margin: 40
-        }}
-        gap="$12"
-        justify="center"
-      >
-        <Container centerContent size="large">
-          <Box>
-            <Logo size="100" />
-          </Box>
-          <Tour></Tour>
-        </Container>
-      </Flex>
-    </FloraProvider>
+    <div>
+      <Home />
+    </div>
   )
 }
 

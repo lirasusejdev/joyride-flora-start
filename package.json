@@ -25,8 +25,9 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@grupoboticario/flora": "0.18.0",
-    "@grupoboticario/flora-react": "0.12.3",
+    "@grupoboticario/flora": "^0.18.0",
+    "@grupoboticario/flora-react": "^0.12.3",
+    "@grupoboticario/flora-shared-react-onboarding": "^1.1.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-joyride": "2.4.0",
